@@ -2,6 +2,7 @@
 
 #include "contact.h"
 
+#include <QDir>
 #include <QDebug>
 #include <QSqlQuery>
 #include <QSqlDatabase>
@@ -204,8 +205,13 @@ void DataBase::delete_db()
 
 QString DataBase::get_db_path(const QString &conn)
 {
-    QStringList locations = QStandardPaths::standardLocations(QStandardPaths::DocumentsLocation);
+    QStringList locations = QStandardPaths::standardLocations(QStandardPaths::AppDataLocation);
     if (locations.empty())
         return conn;
-    return QString("%1/%2").arg(locations.at(0)).arg(conn);
+
+    QDir dir(locations.at(0));
+    if (!dir.exists())
+        dir.mkpath(dir.absolutePath());
+
+    return QString("%1/%2").arg(dir.absolutePath()).arg(conn);
 }
