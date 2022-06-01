@@ -1,0 +1,11 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/add_in_db.png</file>
+        <file>images/quit.png</file>
+        <file>images/remove_from_db.png</file>
+        <file>images/contacts.png</file>
+        <file>images/dummy.png</file>
+        <file>images/find.png</file>
+        <file>images/delete.ico</file>
+    </qresource>
+</RCC>
