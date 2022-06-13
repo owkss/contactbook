@@ -9,7 +9,7 @@ struct Contact
 {
     Contact() {}
     Contact(const Contact &other) { *this = other; }
-    Contact(Contact &&other) { *this = std::move(other); }
+    Contact(Contact &&other)      { *this = std::move(other); }
 
     Contact &operator=(const Contact &other) noexcept
     {
@@ -22,6 +22,7 @@ struct Contact
             email = other.email;
             comment = other.comment;
             icon = other.icon;
+            id = other.id;
         }
 
         return *this;
@@ -38,12 +39,14 @@ struct Contact
             email = std::move(other.email);
             comment = std::move(other.comment);
             icon = std::move(other.icon);
+            id = other.id;
+            other.id = -1;
         }
 
         return *this;
     }
 
-    bool valid() const noexcept { return !name.isEmpty(); }
+    bool valid() const noexcept { return !name.isEmpty() || id == -1; }
     operator bool() const noexcept { return valid(); }
 
     QString name;
@@ -53,6 +56,7 @@ struct Contact
     QString email;
     QString comment;
     QByteArray icon;
+    int id = -1; // Служебное поле
 };
 Q_DECLARE_METATYPE(Contact);
 

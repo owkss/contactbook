@@ -88,7 +88,7 @@ void DataBase::request_data()
     QSqlQuery query(*m_db);
     query.setForwardOnly(true);
 
-    const bool r = query.exec("SELECT name, private_number, office_number, address, email, comment, icon FROM contacts");
+    const bool r = query.exec("SELECT name, private_number, office_number, address, email, comment, icon, id FROM contacts");
     if (r)
     {
         QList<Contact> contacts;
@@ -102,6 +102,7 @@ void DataBase::request_data()
             c.email = query.value(4).toString();
             c.comment = query.value(5).toString();
             c.icon = query.value(6).toByteArray();
+            c.id = query.value(7).toInt();
             contacts.push_back(c);
         }
 
@@ -145,6 +146,34 @@ void DataBase::request_save_new_contact(const Contact &c)
     }
 }
 
+void DataBase::request_refresh_contact(const Contact &c, const int row)
+{
+    QSqlQuery query(*m_db);
+    query.setForwardOnly(true);
+
+    if (query.prepare("UPDATE contacts SET name = :name, private_number = :private_number, office_number = :office_number, address = :address, email = :email, comment = :comment, icon = :icon "
+                      "WHERE id = :id"))
+    {
+        query.bindValue(":name", c.name);
+        query.bindValue(":private_number", c.private_number);
+        query.bindValue(":office_number", c.office_number);
+        query.bindValue(":address", c.address);
+        query.bindValue(":email", c.email);
+        query.bindValue(":comment", c.comment);
+        query.bindValue(":icon", c.icon);
+        query.bindValue(":id", c.id);
+
+        if (query.exec())
+        {
+            std::cout << "successfully updated id = " << c.id << std::endl;
+            emit request_refresh_contact_reply(c, row);
+            return;
+        }
+    }
+
+    emit error_occured(tr("Невозможно обновить данные контакта \"%1\"").arg(c.name));
+}
+
 void DataBase::request_remove_contact(const Contact &c)
 {
     if (!m_initialized)
@@ -157,7 +186,10 @@ void DataBase::request_remove_contact(const Contact &c)
     query.setForwardOnly(true);
 
     if (!query.exec(QString("DELETE FROM contacts WHERE name = '%1'").arg(c.name)))
+    {
+        std::cerr << "id = " << c.id << std::endl;
         emit error_occured(tr("Невозможно удалить из БД контакт \"%1\"").arg(c.name));
+    }
 }
 
 bool DataBase::create_db()

@@ -20,8 +20,10 @@ int main(int argc, char *argv[])
     QObject::connect(&db, &DataBase::error_occured, &w, &MainWindow::error_occured);
     QObject::connect(&db, &DataBase::request_data_reply, &w, &MainWindow::request_data_reply);
     QObject::connect(&db, &DataBase::request_save_new_contact_reply, &w, &MainWindow::request_save_new_contact_reply);
+    QObject::connect(&db, &DataBase::request_refresh_contact_reply, &w, &MainWindow::request_refresh_contact_reply);
     QObject::connect(&w, &MainWindow::request_data, &db, &DataBase::request_data);
     QObject::connect(&w, &MainWindow::request_save_new_contact, &db, &DataBase::request_save_new_contact);
+    QObject::connect(&w, &MainWindow::request_refresh_contact, &db, &DataBase::request_refresh_contact);
     QObject::connect(&w, &MainWindow::request_remove_contact, &db, &DataBase::request_remove_contact);
 
     database_thread.start();

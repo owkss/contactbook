@@ -23,10 +23,18 @@ MainWindow::MainWindow(QWidget *parent)
     QObject::connect(ui->add_contact_btn, &QPushButton::clicked, this, &MainWindow::new_contact_action_triggered);
     QObject::connect(ui->remove_contact_btn, &QPushButton::clicked, this, &MainWindow::remove_button_clicked);
     QObject::connect(ui->ready_btn, &QPushButton::clicked, this, &MainWindow::ready_button_clicked);
+    QObject::connect(ui->refresh_btn, &QPushButton::clicked, this, &MainWindow::refresh_button_clicked);
     QObject::connect(ui->quit_action, &QAction::triggered, this, &MainWindow::quit_action_triggered);
     QObject::connect(ui->filter_edit, &QLineEdit::textChanged, this, &MainWindow::filter_text_changed);
     QObject::connect(ui->contact_list, &QListWidget::itemSelectionChanged, this, &MainWindow::item_selection_changed);
     QObject::connect(ui->contact_list, &QListWidget::customContextMenuRequested, this, &MainWindow::contact_list_right_mouse_button_clicked);
+
+    QObject::connect(ui->name_edit, &QLineEdit::textChanged, this, &MainWindow::field_changed);
+    QObject::connect(ui->private_number_edit, &QLineEdit::textChanged, this, &MainWindow::field_changed);
+    QObject::connect(ui->office_number_edit, &QLineEdit::textChanged, this, &MainWindow::field_changed);
+    QObject::connect(ui->address_edit, &QLineEdit::textChanged, this, &MainWindow::field_changed);
+    QObject::connect(ui->email_edit, &QLineEdit::textChanged, this, &MainWindow::field_changed);
+    QObject::connect(ui->comment_edit, &QLineEdit::textChanged, this, &MainWindow::field_changed);
 
     QTimer::singleShot(0, this, &MainWindow::load_state);
     QTimer::singleShot(0, this, &MainWindow::request_data);
@@ -61,6 +69,22 @@ void MainWindow::request_save_new_contact_reply(const Contact &c)
     add_contact_to_list(c);
 }
 
+void MainWindow::request_refresh_contact_reply(const Contact &c, const int row)
+{
+    QListWidgetItem *item = ui->contact_list->item(row);
+    if (!item)
+    {
+        error_occured(tr("Внутрення ошибка (название \"%1\", строка \"%2\")").arg(c.name).arg(row));
+        return;
+    }
+
+    QVariant var;
+    var.setValue(c);
+
+    item->setText(c.name);
+    item->setData(Qt::UserRole, var);
+}
+
 void MainWindow::save_state()
 {
     QSettings sett("true", "contactbook");
@@ -81,6 +105,7 @@ void MainWindow::load_state()
 
 void MainWindow::new_contact_action_triggered()
 {
+    m_contact_editting = false;
     clear_fields();
 
     ui->contact_list->setEnabled(false);
@@ -120,15 +145,7 @@ void MainWindow::remove_button_clicked()
 
 void MainWindow::ready_button_clicked()
 {
-    Contact c;
-    c.name = ui->name_edit->text();
-    c.private_number = ui->private_number_edit->text();
-    c.office_number = ui->office_number_edit->text();
-    c.address = ui->address_edit->text();
-    c.email = ui->email_edit->text();
-    c.comment = ui->comment_edit->text();
-    c.icon = contactbook::save_to_data(ui->image_btn->icon());
-
+    Contact c = get_fields();
     clear_fields();
 
     ui->contact_list->setEnabled(true);
@@ -139,6 +156,21 @@ void MainWindow::ready_button_clicked()
     ui->ready_btn->setVisible(false);
 
     emit request_save_new_contact(c);
+}
+
+void MainWindow::refresh_button_clicked()
+{
+    QList<QListWidgetItem*> selected = ui->contact_list->selectedItems();
+    if (selected.empty())
+        return;
+
+    const int row = ui->contact_list->row(selected.at(0));
+
+    m_contact_editting = false;
+    ui->refresh_btn->setVisible(false);
+
+    Contact c = get_fields();
+    emit request_refresh_contact(c, row);
 }
 
 void MainWindow::quit_action_triggered()
@@ -158,6 +190,9 @@ void MainWindow::image_btn_clicked()
 
 void MainWindow::item_selection_changed()
 {
+    m_contact_editting = false;
+    ui->refresh_btn->setVisible(false);
+
     QList<QListWidgetItem*> selected = ui->contact_list->selectedItems();
     if (selected.empty())
         return;
@@ -167,6 +202,8 @@ void MainWindow::item_selection_changed()
     QListWidgetItem *item = selected.at(0);
     Contact c = item->data(Qt::UserRole).value<Contact>();
     set_fields(c);
+
+    m_contact_editting = true;
 }
 
 void MainWindow::filter_text_changed(const QString &text)
@@ -198,6 +235,15 @@ void MainWindow::contact_list_right_mouse_button_clicked(const QPoint &pos)
     ui->remove_contact_btn->setVisible(bool(ui->contact_list->itemAt(pos)));
 }
 
+void MainWindow::field_changed(const QString &)
+{
+    if (!m_contact_editting)
+        return;
+
+    if (!ui->refresh_btn->isVisible())
+        ui->refresh_btn->setVisible(true);
+}
+
 void MainWindow::create_ui()
 {
     m_splitter = new QSplitter(Qt::Horizontal, this);
@@ -210,11 +256,35 @@ void MainWindow::create_ui()
     ui->filter_edit->addAction(QIcon(":/images/find.png"), QLineEdit::LeadingPosition);
     ui->contact_info_widget->setEnabled(false);
     ui->ready_btn->setVisible(false);
+    ui->refresh_btn->setVisible(false);
     ui->remove_contact_btn->setVisible(false);
+    ui->id->setVisible(false);
+}
+
+Contact MainWindow::get_fields() const
+{
+    Contact c;
+    c.name = ui->name_edit->text();
+    c.private_number = ui->private_number_edit->text();
+    c.office_number = ui->office_number_edit->text();
+    c.address = ui->address_edit->text();
+    c.email = ui->email_edit->text();
+    c.comment = ui->comment_edit->text();
+    c.icon = contactbook::save_to_data(ui->image_btn->icon());
+    c.id = ui->id->value();
+    return c;
 }
 
 void MainWindow::set_fields(const Contact &c)
-{
+{   
+    ui->name_edit->blockSignals(true);
+    ui->private_number_edit->blockSignals(true);
+    ui->office_number_edit->blockSignals(true);
+    ui->address_edit->blockSignals(true);
+    ui->email_edit->blockSignals(true);
+    ui->comment_edit->blockSignals(true);
+
+    /* Выставление значений ---> */
     ui->name_edit->setText(c.name);
     ui->private_number_edit->setText(c.private_number);
     ui->office_number_edit->setText(c.office_number);
@@ -222,6 +292,15 @@ void MainWindow::set_fields(const Contact &c)
     ui->email_edit->setText(c.email);
     ui->comment_edit->setText(c.comment);
     ui->image_btn->setIcon(contactbook::load_from_data(c.icon));
+    ui->id->setValue(c.id);
+    /* <--- Выставление значений */
+
+    ui->name_edit->blockSignals(false);
+    ui->private_number_edit->blockSignals(false);
+    ui->office_number_edit->blockSignals(false);
+    ui->address_edit->blockSignals(false);
+    ui->email_edit->blockSignals(false);
+    ui->comment_edit->blockSignals(false);
 }
 
 void MainWindow::clear_fields()
@@ -234,6 +313,7 @@ void MainWindow::clear_fields()
     ui->address_edit->clear();
     ui->email_edit->clear();
     ui->comment_edit->clear();
+    ui->id->setValue(0);
 }
 
 void MainWindow::add_contact_to_list(const Contact &c)

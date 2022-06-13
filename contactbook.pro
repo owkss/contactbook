@@ -20,7 +20,6 @@ CONFIG(release, debug|release){
 }
 
 SOURCES += \
-    contact.cpp \
     database.cpp \
     functions.cpp \
     main.cpp \
