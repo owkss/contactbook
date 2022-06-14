@@ -10,6 +10,7 @@
 #include <QSettings>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QStandardPaths>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -180,12 +181,18 @@ void MainWindow::quit_action_triggered()
 
 void MainWindow::image_btn_clicked()
 {
-    QString image_path = QFileDialog::getOpenFileName(this, tr("Выбор изображения"), QApplication::applicationDirPath(), tr("Файлы изображений(*.bmp *.gif *.jpg *.jpeg *.png)"));
+    QStringList list = QStandardPaths::standardLocations(QStandardPaths::PicturesLocation);
+    QString std_path = list.empty() ? QApplication::applicationDirPath() : list.at(0);
+
+    QString image_path = QFileDialog::getOpenFileName(this, tr("Выбор изображения"), std_path, tr("Файлы изображений(*.bmp *.gif *.jpg *.jpeg *.png)"));
     if (image_path.isEmpty())
         return;
 
     QImage img(image_path);
     ui->image_btn->setIcon(QPixmap::fromImage(std::move(img)));
+
+    if (m_contact_editting)
+        ui->refresh_btn->setVisible(true);
 }
 
 void MainWindow::item_selection_changed()
