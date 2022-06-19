@@ -38,7 +38,7 @@ MainWindow::MainWindow(QWidget *parent)
     QObject::connect(ui->comment_edit, &QLineEdit::textChanged, this, &MainWindow::field_changed);
 
     QTimer::singleShot(0, this, &MainWindow::load_state);
-    QTimer::singleShot(0, this, &MainWindow::request_data);
+    QTimer::singleShot(250, this, &MainWindow::request_data);
 }
 
 MainWindow::~MainWindow()
